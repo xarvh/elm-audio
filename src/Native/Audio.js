@@ -25,8 +25,8 @@ Elm.Native.Audio.make = function make(elm) {
 //        console.log('--', value.ctor);
 
     return Task.asyncFunction(function (callback) {
+      sound.audio.onended = function () { callback(Task.succeed()); };
       sound.audio.play();
-      callback(Task.succeed());
     });
   }
 
