@@ -21,18 +21,20 @@ Elm.Native.Audio.make = function make(elm) {
   }
 
   function playSound(options, sound) {
-//    for (var value, index = 0; value = options['_' + index]; index++)
-//        console.log('--', value.ctor);
-
     return Task.asyncFunction(function (callback) {
+      sound.audio.volume = options.volume;
+      sound.audio.loop = options.loop;
+      if (options.startAt.ctor == 'Just') {
+        sound.audio.currentTime = options.startAt._0;
+      }
       sound.audio.onended = function () { callback(Task.succeed()); };
       sound.audio.play();
     });
   }
 
-  function stopSound(audio) {
+  function stopSound(sound) {
     return Task.asyncFunction(function (callback) {
-      audio.audio.stop();
+      sound.audio.pause();
       callback(Task.succeed());
     });
   }
