@@ -20,6 +20,7 @@ Elm.Native.Audio.make = function make(elm) {
     });
   }
 
+
   function playSound(options, sound) {
     return Task.asyncFunction(function (callback) {
       sound.audio.volume = options.volume;
@@ -31,6 +32,7 @@ Elm.Native.Audio.make = function make(elm) {
       sound.audio.play();
     });
   }
+
 
   function stopSound(sound) {
     return Task.asyncFunction(function (callback) {

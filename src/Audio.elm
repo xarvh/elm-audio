@@ -32,6 +32,7 @@ defaultPlaybackOptions =
   PlaybackOptions 1.0 (Just 0.0) False
 
 
+-- Task Interface
 {-| load -}
 loadSound : String -> Task.Task String Sound
 loadSound = Native.Audio.loadSound
@@ -43,15 +44,3 @@ playSound = Native.Audio.playSound
 {-| stop -}
 stopSound : Sound -> Task.Task () ()
 stopSound = Native.Audio.stopSound
-
---
--- TODO Is there a way to make this run in parallel?
---
-{-| loadSoundsDict -}
-loadSoundsDict : List (comparable, String) -> Task.Task String (Dict.Dict comparable Sound)
-loadSoundsDict namesAndUris =
-  let
-    nameAndUriToTask (name, uri) =
-      Task.map ((,) name) (loadSound uri)
-  in
-    Task.map Dict.fromList <| Task.sequence <| List.map nameAndUriToTask namesAndUris
