@@ -1,46 +1,72 @@
-module Audio where
+module Audio (..) where
 
-{-| Stuff..
+{-|
 
-@docs Sound
+# Sounds
+@docs Sound, loadSound
 
-@docs PlaybackOption
-
-@docs loadSound, playSound, stopSound
+# Playback
+@docs PlaybackOptions, defaultPlaybackOptions, playSound, stopSound
 
 -}
 
-import Dict
 import Task
 import Time
 import Native.Audio
 
 
-{-| It's a sound -}
-type Sound = Sound
+{-| An identifier to a sound sample. Under the hood, it's just a HTML5 Audio
+tag.
+-}
+type Sound
+  = Sound
 
 
-{-| All options for sound playing -}
+{-| The options available for sound playback.
+
+  * `volume` is the relative playback volume, from 0 to 1.
+
+  * `startAt` controls the starting time offset for the sound.
+    Use `Just 0` to start from the beginning or `Nothing` to start from the
+    previous position.
+
+  * `loop` continuously repeats the sound when set to `True`.
+
+-}
 type alias PlaybackOptions =
   { volume : Float
   , startAt : Maybe Time.Time
   , loop : Bool
   }
 
-{-| defaultopts -}
+
+{-| Default options to play the sound once, at full volume and from the
+beginning.
+-}
+defaultPlaybackOptions : PlaybackOptions
 defaultPlaybackOptions =
   PlaybackOptions 1.0 (Just 0.0) False
 
 
--- Task Interface
-{-| load -}
+{-| Loads a sound from the given URL.
+Once the sound resource has been transferred completely, the Task will provide
+a new [Sound] object ready to play.
+On error, the error message will be provided as a `String`.
+-}
 loadSound : String -> Task.Task String Sound
-loadSound = Native.Audio.loadSound
+loadSound =
+  Native.Audio.loadSound
 
-{-| play -}
+
+{-| Play a `Sound` with the specified options.
+-}
 playSound : PlaybackOptions -> Sound -> Task.Task () ()
-playSound = Native.Audio.playSound
+playSound =
+  Native.Audio.playSound
 
-{-| stop -}
+
+{-| Stop/Pause a `Sound`.
+-}
 stopSound : Sound -> Task.Task () ()
-stopSound = Native.Audio.stopSound
+stopSound =
+  Native.Audio.stopSound

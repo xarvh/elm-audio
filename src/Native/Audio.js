@@ -4,7 +4,7 @@ Elm.Native.Audio.make = function make(elm) {
   elm.Native = elm.Native || {};
   elm.Native.Audio = elm.Native.Audio || {};
   if (elm.Native.Audio.values) {
-      return elm.Native.Audio.values;
+    return elm.Native.Audio.values;
   }
 
   var Task = Elm.Native.Task.make(elm);
@@ -25,9 +25,7 @@ Elm.Native.Audio.make = function make(elm) {
     return Task.asyncFunction(function (callback) {
       sound.audio.volume = options.volume;
       sound.audio.loop = options.loop;
-      if (options.startAt.ctor == 'Just') {
-        sound.audio.currentTime = options.startAt._0;
-      }
+      if (options.startAt.ctor == 'Just') { sound.audio.currentTime = options.startAt._0; }
       sound.audio.onended = function () { callback(Task.succeed()); };
       sound.audio.play();
     });
@@ -43,8 +41,8 @@ Elm.Native.Audio.make = function make(elm) {
 
 
   return elm.Native.Audio.values = {
-      loadSound: loadSound,
-      playSound: F2(playSound),
-      stopSound: stopSound,
+    loadSound: loadSound,
+    playSound: F2(playSound),
+    stopSound: stopSound,
   };
 };
