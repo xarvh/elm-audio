@@ -51,12 +51,12 @@ loadAllSounds =
     ]
 
 
-playSound : SoundsDict String -> String -> Task.Task () ()
+playSound : SoundsDict String -> String -> Task.Task String ()
 playSound soundDictionary soundId =
   case Dict.get soundId soundDictionary of
     Just sound ->
-      Audio.playSound Audio.defaultPlaybackOptions sound
+      Task.mapError (\_ -> "") <| Audio.playSound Audio.defaultPlaybackOptions sound
 
     Nothing ->
-      Debug.crash <| soundId ++ " not loaded!"
+      Task.fail <| soundId ++ " not loaded!"
 ```

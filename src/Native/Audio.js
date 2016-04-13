@@ -19,7 +19,9 @@ Elm.Native.Audio.make = function make(elm) {
       var audio = new Audio();
 
       function oncanplaythrough() {
-        callback(Task.succeed({ ctor: 'Sound', audio: audio }));
+        var o = { ctor: 'Sound', src: source };
+        Object.defineProperty(o, 'audio', { value: audio });
+        callback(Task.succeed(o));
       };
 
       function onerror(/* event */) {
@@ -37,16 +39,18 @@ Elm.Native.Audio.make = function make(elm) {
 
   function playSound(options, sound) {
     return Task.asyncFunction(function (callback) {
-      sound.audio.volume = options.volume;
-      sound.audio.loop = options.loop;
-      if (options.startAt.ctor == 'Just') { sound.audio.currentTime = options.startAt._0; }
+      var audio = sound.audio;
+
+      audio.volume = options.volume;
+      audio.loop = options.loop;
+      if (options.startAt.ctor === 'Just') { audio.currentTime = options.startAt._0; }
 
       function onended() {
         callback(Task.succeed());
       };
 
-      sound.audio.addEventListener('ended', onended, false);
-      sound.audio.play();
+      audio.addEventListener('ended', onended, false);
+      audio.play();
     });
   }
 
