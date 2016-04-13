@@ -12,11 +12,25 @@ Elm.Native.Audio.make = function make(elm) {
 
   function loadSound(source) {
     return Task.asyncFunction(function (callback) {
+      if (typeof Audio === 'undefined') {
+        return callback(Task.fail('The browser does not support HTML5 Audio'));
+      }
+
       var audio = new Audio();
+
+      function oncanplaythrough() {
+        callback(Task.succeed({ ctor: 'Sound', audio: audio }));
+      };
+
+      function onerror(/* event */) {
+        callback(Task.fail('Unable to load ' + source));
+      };
+
+      audio.addEventListener('canplaythrough', oncanplaythrough, false);
+      audio.addEventListener('error', onerror, false);
       audio.preload = 'auto';
-      audio.oncanplaythrough = function () { callback(Task.succeed({ ctor: 'Sound', audio: audio })); };
-      audio.onerror = function (err) { callback(Task.fail({ ctor: 'Error', message: err })); };
       audio.src = source;
+      audio.load();
     });
   }
 
@@ -26,7 +40,12 @@ Elm.Native.Audio.make = function make(elm) {
       sound.audio.volume = options.volume;
       sound.audio.loop = options.loop;
       if (options.startAt.ctor == 'Just') { sound.audio.currentTime = options.startAt._0; }
-      sound.audio.onended = function () { callback(Task.succeed()); };
+
+      function onended() {
+        callback(Task.succeed());
+      };
+
+      sound.audio.addEventListener('ended', onended, false);
       sound.audio.play();
     });
   }

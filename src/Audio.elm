@@ -59,6 +59,7 @@ loadSound =
 
 
 {-| Play a `Sound` with the specified options.
+The `Task` will complete when the sound has finished playing.
 -}
 playSound : PlaybackOptions -> Sound -> Task.Task () ()
 playSound =
