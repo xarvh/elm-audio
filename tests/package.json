@@ -1,0 +1,12 @@
+{
+  "name": "elm-audio-tests",
+  "main": "testRunner.js",
+  "scripts": {
+    "build": "elm-make app.elm --output=build/app.js",
+    "test": "npm run build; electron testRunner.js"
+  },
+  "dependencies": {
+    "electron-prebuilt": "^0.37.6",
+    "elm": "^0.16.0"
+  }
+}
