@@ -2,7 +2,7 @@
   "name": "elm-audio-tests",
   "main": "testRunner.js",
   "scripts": {
-    "build": "elm-make app.elm --output=build/app.js",
+    "build": "ln -s ../src; elm-make tests.elm --output=build/app.js",
     "test": "npm run build; electron testRunner.js"
   },
   "dependencies": {

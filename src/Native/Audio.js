@@ -1,19 +1,15 @@
+var _xarvh$elm_audio$Native_Audio = function() {
+
 Elm.Native.Audio = {};
 Elm.Native.Audio.make = function make(elm) {
 
-  elm.Native = elm.Native || {};
-  elm.Native.Audio = elm.Native.Audio || {};
-  if (elm.Native.Audio.values) {
-    return elm.Native.Audio.values;
-  }
-
-  var Task = Elm.Native.Task.make(elm);
-
+  var scheduler = _elm_lang$core$Native_Scheduler
 
   function loadSound(source) {
-    return Task.asyncFunction(function (callback) {
+    return scheduler.nativeBinding(function(callback){
+
       if (typeof Audio === 'undefined') {
-        return callback(Task.fail('The browser does not support HTML5 Audio'));
+        return callback(scheduler.fail('The browser does not support HTML5 Audio'));
       }
 
       var audio = new Audio();
@@ -21,11 +17,11 @@ Elm.Native.Audio.make = function make(elm) {
       function oncanplaythrough() {
         var o = { ctor: 'Sound', src: source };
         Object.defineProperty(o, 'audio', { value: audio });
-        callback(Task.succeed(o));
+        callback(scheduler.succeed(o));
       };
 
       function onerror(/* event */) {
-        callback(Task.fail('Unable to load ' + source));
+        callback(scheduler.fail('Unable to load ' + source));
       };
 
       audio.addEventListener('canplaythrough', oncanplaythrough, false);
@@ -38,7 +34,7 @@ Elm.Native.Audio.make = function make(elm) {
 
 
   function playSound(options, sound) {
-    return Task.asyncFunction(function (callback) {
+    return scheduler.nativeBinding(function (callback) {
       var audio = sound.audio;
 
       audio.volume = options.volume;
@@ -46,7 +42,7 @@ Elm.Native.Audio.make = function make(elm) {
       if (options.startAt.ctor === 'Just') { audio.currentTime = options.startAt._0; }
 
       function onended() {
-        callback(Task.succeed());
+        callback(scheduler.succeed());
       };
 
       audio.addEventListener('ended', onended, false);
@@ -56,9 +52,9 @@ Elm.Native.Audio.make = function make(elm) {
 
 
   function stopSound(sound) {
-    return Task.asyncFunction(function (callback) {
+    return scheduler.nativeBinding(function (callback) {
       sound.audio.pause();
-      callback(Task.succeed());
+      callback(scheduler.succeed());
     });
   }
 
