@@ -1,32 +1,37 @@
 var _xarvh$elm_audio$Native_Audio = function() {
 
-Elm.Native.Audio = {};
-Elm.Native.Audio.make = function make(elm) {
 
-  var scheduler = _elm_lang$core$Native_Scheduler
+  var Task = _elm_lang$core$Native_Scheduler;
+
 
   function loadSound(source) {
-    return scheduler.nativeBinding(function(callback){
+    return Task.nativeBinding(function (callback) {
 
       if (typeof Audio === 'undefined') {
-        return callback(scheduler.fail('The browser does not support HTML5 Audio'));
+        return callback(Task.fail('The browser does not support HTML5 Audio'));
       }
 
       var audio = new Audio();
+      audio.preload = 'auto';
 
       function oncanplaythrough() {
-        var o = { ctor: 'Sound', src: source };
-        Object.defineProperty(o, 'audio', { value: audio });
-        callback(scheduler.succeed(o));
+        // `canplaythrough` triggers also when audio.currentTime is assigned
+        audio.removeEventListener('canplaythrough', oncanplaythrough, false);
+
+        var elmSound = { ctor: 'Sound', src: source };
+
+        // define audio as non-enumerable property to allow comparison and stringification
+        Object.defineProperty(elmSound, 'audio', { value: audio });
+
+        callback(Task.succeed(elmSound));
       };
 
       function onerror(/* event */) {
-        callback(scheduler.fail('Unable to load ' + source));
+        callback(Task.fail('Unable to load ' + source));
       };
 
       audio.addEventListener('canplaythrough', oncanplaythrough, false);
       audio.addEventListener('error', onerror, false);
-      audio.preload = 'auto';
       audio.src = source;
       audio.load();
     });
@@ -34,15 +39,26 @@ Elm.Native.Audio.make = function make(elm) {
 
 
   function playSound(options, sound) {
-    return scheduler.nativeBinding(function (callback) {
+    return Task.nativeBinding(function (callback) {
       var audio = sound.audio;
 
-      audio.volume = options.volume;
       audio.loop = options.loop;
-      if (options.startAt.ctor === 'Just') { audio.currentTime = options.startAt._0; }
+
+      if (options.volume < 0 || options.volume > 1) {
+        return callback(Task.fail('volume should be within 0 and 1, but is ' + options.volume));
+      }
+      audio.volume = options.volume;
+
+      if (options.startAt.ctor === 'Just') {
+        var startAt = options.startAt._0;
+        if (!(startAt >= 0) || !isFinite(startAt)) {
+          return callback(Task.fail('startAt should be finite and positive, but is ' + startAt));
+        }
+        audio.currentTime = options.startAt._0;
+      }
 
       function onended() {
-        callback(scheduler.succeed());
+        callback(Task.succeed());
       };
 
       audio.addEventListener('ended', onended, false);
@@ -52,16 +68,16 @@ Elm.Native.Audio.make = function make(elm) {
 
 
   function stopSound(sound) {
-    return scheduler.nativeBinding(function (callback) {
+    return Task.nativeBinding(function (callback) {
       sound.audio.pause();
-      callback(scheduler.succeed());
+      callback(Task.succeed());
     });
   }
 
 
-  return elm.Native.Audio.values = {
+  return {
     loadSound: loadSound,
     playSound: F2(playSound),
     stopSound: stopSound,
   };
-};
+}();

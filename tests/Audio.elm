@@ -1,0 +1,60 @@
+
+import AsyncTest exposing (Test)
+import Process
+import Task
+import Time
+
+
+--
+-- Test Target
+--
+import Audio exposing (defaultPlaybackOptions)
+
+
+--
+-- Helpers
+--
+(&>) = Task.andThen
+infixl 9 &>
+
+
+
+
+--
+-- Test Cases
+--
+main = AsyncTest.program
+
+  [ Test "Basic playback works" <|
+
+      Audio.loadSound "short.ogg" &> \sound ->
+      Time.now &> \startTime ->
+      Audio.playSound defaultPlaybackOptions sound &> \_ ->
+      Time.now &> \endTime ->
+        let
+            expectedDuration = 1.974 * Time.second
+            actualDuration = endTime - startTime
+        in
+           if abs (expectedDuration - actualDuration) < 0.2 * Time.second then Task.succeed ()
+           else Task.fail <| "Expected playback of " ++ (toString expectedDuration) ++ " but task lasted " ++ (toString actualDuration)
+
+
+  , Test "Load inexistent sound produces an error" <|
+
+      Task.toResult (Audio.loadSound "garblegarble.wav") &> \result ->
+        case result of
+          Ok sound -> Task.fail "loadSound should not succeed"
+          Err message -> Task.succeed ()
+
+
+  , Test "Stop a sound" <|
+      Task.succeed ()
+
+
+  , Test "Loop a sound" <|
+      Task.succeed ()
+
+
+  , Test "Play two sounds at the same time" <|
+      Task.succeed ()
+  ]

@@ -1,5 +1,6 @@
+module AsyncTest exposing (..)
 
--- import Audio
+
 import Dict
 import Set
 import Html exposing (..)
@@ -7,7 +8,6 @@ import Html.App
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Task
-
 
 
 
@@ -106,6 +106,7 @@ testView model test =
         [ class "test-button"
         , id test.name
         , disabled isDisabled
+        , onClick <| UserStartsTest test
         ]
         [ text test.name ]
       , span
@@ -146,9 +147,10 @@ init tests =
 --
 -- Main
 --
-main =
+program : List Test -> Program Never
+program tests =
   Html.App.program
-  { init = init []
+  { init = init tests
   , update = update
   , view = view
   , subscriptions = \_ -> Sub.none

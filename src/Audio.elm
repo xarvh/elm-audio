@@ -1,4 +1,4 @@
-module Audio (..) where
+module Audio exposing (..)
 
 {-|
 
@@ -61,13 +61,13 @@ loadSound =
 {-| Play a `Sound` with the specified options.
 The `Task` will complete when the sound has finished playing.
 -}
-playSound : PlaybackOptions -> Sound -> Task.Task () ()
+playSound : PlaybackOptions -> Sound -> Task.Task String ()
 playSound =
   Native.Audio.playSound
 
 
 {-| Stop/Pause a `Sound`.
 -}
-stopSound : Sound -> Task.Task () ()
+stopSound : Sound -> Task.Task Never ()
 stopSound =
   Native.Audio.stopSound
