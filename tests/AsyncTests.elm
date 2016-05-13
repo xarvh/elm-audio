@@ -96,11 +96,11 @@ testView model test =
 
     (message, clazz) = case Maybe.withDefault (Failed "!!") <| Dict.get test.name model.testStatusByName of
       Pending -> ("Pending", "pending")
-      Successful -> ("Passed", "success")
-      Failed message -> ("Failed: " ++ message, "error")
+      Successful -> ("Passed", "passed")
+      Failed message -> ("Failed: " ++ message, "failed")
 
   in
-    div
+    li
       []
       [ button
         [ class "test-button"
@@ -117,7 +117,7 @@ testView model test =
 
 view : Model -> Html Message
 view model =
-  div [] <| List.map (testView model) model.tests
+  ol [] <| List.map (testView model) model.tests
 
 
 
