@@ -1,4 +1,4 @@
-module AsyncTest exposing (..)
+port module AsyncTest exposing (..)
 
 
 import Dict
@@ -9,6 +9,11 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Task
 
+
+
+--
+-- Model
+--
 
 
 type alias Test =
@@ -25,9 +30,7 @@ type TestStatus
 
 
 type Message
-  = Noop
-
-  | UserStartsTest Test
+  = UserStartsTest Test
   | TestSucceeds
   | TestFails String
 
@@ -47,16 +50,20 @@ noCmd : Model -> (Model, Cmd Message)
 noCmd m =
   (m, Cmd.none)
 
-testFinished : TestStatus -> Model -> Model
-testFinished status model =
-  case model.currentTest of
-    Nothing -> Debug.crash "Test finished, but currentStatus is unset"
-    Just test ->
-      { model
-      | currentTest = Nothing
-      , testStatusByName = Dict.insert test.name status model.testStatusByName
-      }
 
+testFinished : TestStatus -> Model -> (Model, Cmd Message)
+testFinished status oldModel =
+  case oldModel.currentTest of
+    Nothing -> Debug.crash "** library error ** Test finished, but currentStatus is unset"
+    Just test ->
+      let
+        newModel =
+          { oldModel
+          | currentTest = Nothing
+          , testStatusByName = Dict.insert test.name status oldModel.testStatusByName
+          }
+      in
+        ( newModel, sendTestStatusToBackend newModel test status )
 
 
 --
@@ -65,8 +72,6 @@ testFinished status model =
 update : Message -> Model -> (Model, Cmd Message)
 update message oldModel =
   case message of
-    Noop ->
-      noCmd oldModel
 
     UserStartsTest test ->
       if oldModel.currentTest /= Nothing
@@ -74,15 +79,16 @@ update message oldModel =
       else
         let
            newModel = { oldModel | currentTest = Just test }
-           cmd = Task.perform TestFails (\_ -> TestSucceeds) test.task
+           testCmd = Task.perform TestFails (\_ -> TestSucceeds) test.task
+           backendCmd = sendTestStatusToBackend newModel test Pending
         in
-           (newModel, cmd)
+           (newModel, Cmd.batch [backendCmd, testCmd])
 
     TestSucceeds ->
-      noCmd <| testFinished Successful oldModel
+      testFinished Successful oldModel
 
     TestFails error ->
-      noCmd <| testFinished (Failed error) oldModel
+      testFinished (Failed error) oldModel
 
 
 
@@ -92,7 +98,7 @@ update message oldModel =
 --
 testView model test =
   let
-    isDisabled = model.currentTest /= Nothing
+    isDisabled = False --model.currentTest /= Nothing
 
     (message, clazz) = case Maybe.withDefault (Failed "!!") <| Dict.get test.name model.testStatusByName of
       Pending -> ("Pending", "pending")
@@ -143,6 +149,19 @@ init tests =
 
 
 
+--
+-- Ports
+--
+
+port sendTestStatusToBackendPort : (String, String, Int) -> Cmd msg
+
+sendTestStatusToBackend : Model -> Test -> TestStatus -> Cmd msg
+sendTestStatusToBackend model test status =
+  let
+    pendingCount = Dict.values model.testStatusByName |> List.filter ((==) Pending) |> List.length
+  in
+    sendTestStatusToBackendPort (test.name, toString status, pendingCount)
+
 
 --
 -- Main
@@ -155,4 +174,3 @@ program tests =
   , view = view
   , subscriptions = \_ -> Sub.none
   }
-
