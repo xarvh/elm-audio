@@ -1,5 +1,8 @@
-# elm-package generated files
+node_modules/
+
 elm-stuff/
-# elm-repl generated files
 repl-temp-*
 documentation.json
+
+tests/build/
+tests/src
