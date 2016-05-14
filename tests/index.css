@@ -1,0 +1,26 @@
+body {
+  background-color: #ecf0f1;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-family: "Lato", sans-serif;
+
+  padding: 1rem;
+  margin: 0 auto
+}
+
+li {
+  margin-bottom: 1rem;
+}
+
+.test-status {
+  margin-left: 1rem;
+}
+.test-status-pending {
+  color: grey;
+}
+.test-status-passed {
+  color: #11C611;
+}
+.test-status-failed {
+  color: red;
+}

@@ -1,3 +1,6 @@
+[![Build Status](https://secure.travis-ci.org/xarvh/elm-audio.png?branch=master)](http://travis-ci.org/xarvh/elm-audio)
+
+
 # elm-audio
 Basic interface for HTML5 Audio object.
 
