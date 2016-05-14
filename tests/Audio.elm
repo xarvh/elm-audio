@@ -18,15 +18,12 @@ import Audio exposing (defaultPlaybackOptions)
 infixl 9 &>
 
 
-
-
 --
 -- Test Cases
 --
-main = AsyncTest.program
+main = AsyncTest.program <|
 
   [ Test "Basic playback works" <|
-
       Audio.loadSound "short.ogg" &> \sound ->
       Time.now &> \startTime ->
       Audio.playSound defaultPlaybackOptions sound &> \_ ->
@@ -40,21 +37,61 @@ main = AsyncTest.program
 
 
   , Test "Load inexistent sound produces an error" <|
-
       Task.toResult (Audio.loadSound "garblegarble.wav") &> \result ->
         case result of
           Ok sound -> Task.fail "loadSound should not succeed"
           Err message -> Task.succeed ()
 
 
-  , Test "Stop a sound" <|
-      Task.succeed ()
+  , Test "Stopping a sound works" <|
+      Audio.loadSound "short.ogg" &> \sound ->
+      Process.spawn (
+        Process.sleep (0.1 * Time.second) &> \_ ->
+        Audio.playSound defaultPlaybackOptions sound &> \_ ->
+        Debug.crash "Stopped sound should not complete"
+      ) &> \_ ->
+        Process.sleep (0.5 * Time.second) &> \_ ->
+        (Task.mapError (\_ -> "") <| Audio.stopSound sound) &> \_ ->
+        Process.sleep (2.0 * Time.second) &> \_ ->
+        Task.succeed ()
 
 
-  , Test "Loop a sound" <|
-      Task.succeed ()
-
-
-  , Test "Play two sounds at the same time" <|
-      Task.succeed ()
+  , Test "Playback can be looped" <|
+      Audio.loadSound "short.ogg" &> \sound ->
+      Process.spawn (
+        Process.sleep (0.1 * Time.second) &> \_ ->
+        Audio.playSound { defaultPlaybackOptions | loop = True } sound &> \_ ->
+        Debug.crash "Looping sound should not complete"
+      ) &> \_ ->
+        Process.sleep (4 * Time.second) &> \_ ->
+        (Task.mapError (\_ -> "") <| Audio.stopSound sound) &> \_ ->
+        Task.succeed ()
   ]
+
+  ++
+
+  let
+    test volume =
+      Test ("Playback rejects volume = " ++ toString volume) <|
+
+        Audio.loadSound "short.ogg" &> \sound ->
+        Task.toResult (Audio.playSound { defaultPlaybackOptions | volume = volume } sound) &> \result ->
+        case result of
+          Ok sound -> Task.fail <| "playSound should reject volume = " ++ (toString volume)
+          Err message -> Task.succeed ()
+  in
+    List.map test [0/0, 1/0, -1, 1.1]
+
+  ++
+
+  let
+    test startAt =
+      Test ("Playback rejects startAt = " ++ toString startAt) <|
+
+        Audio.loadSound "short.ogg" &> \sound ->
+        Task.toResult (Audio.playSound { defaultPlaybackOptions | startAt = Just startAt } sound) &> \result ->
+        case result of
+          Ok sound -> Task.fail <| "playSound should reject startAt = " ++ (toString startAt)
+          Err message -> Task.succeed ()
+  in
+    List.map test [0/0, 1/0, -1]

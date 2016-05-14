@@ -44,14 +44,14 @@ var _xarvh$elm_audio$Native_Audio = function() {
 
       audio.loop = options.loop;
 
-      if (options.volume < 0 || options.volume > 1) {
+      if (!(options.volume >= 0 && options.volume <= 1)) {
         return callback(Task.fail('volume should be within 0 and 1, but is ' + options.volume));
       }
       audio.volume = options.volume;
 
       if (options.startAt.ctor === 'Just') {
         var startAt = options.startAt._0;
-        if (!(startAt >= 0) || !isFinite(startAt)) {
+        if (!(startAt >= 0 && isFinite(startAt))) {
           return callback(Task.fail('startAt should be finite and positive, but is ' + startAt));
         }
         audio.currentTime = options.startAt._0;
