@@ -66,6 +66,25 @@ main = AsyncTest.program <|
         Process.sleep (4 * Time.second) &> \_ ->
         (Task.mapError (\_ -> "") <| Audio.stopSound sound) &> \_ ->
         Task.succeed ()
+
+
+  , Test "Sound objects are comparable" <|
+      Audio.loadSound "short.ogg" &> \a ->
+      Audio.loadSound "short.ogg" &> \b ->
+        if a == b
+        then Task.succeed ()
+        else  Task.fail "Sound with same source should compare equal"
+
+
+  , Test "Sound objects are stringifyable" <|
+      Audio.loadSound "short.ogg" &> \sound ->
+      let
+          expected = "Sound \"short.ogg\""
+          actual = toString sound
+      in
+        if actual == expected
+        then Task.succeed ()
+        else Task.fail <| "Expected stringification to be `" ++ expected ++ "` but instead got `" ++ actual ++ "`"
   ]
 
   ++
