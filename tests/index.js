@@ -5,7 +5,7 @@ var elmApp = (isElectron ? module.exports : Elm).Main.fullscreen();
 
 
 if (!isElectron) {
-  elmApp.ports.sendTestStatusToBackendPort.subscribe(function (tuple) { console.info(tuple);});
+  elmApp.ports.sendUpdateToBackendPort.subscribe(function (tuple) { console.info(tuple);});
 
 } else {
   var ipcRenderer = require('electron').ipcRenderer;
