@@ -7,13 +7,20 @@ import Html exposing (..)
 import Html.App
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Process
 import Task
+import Time
 
 
 
 --
 -- Model
 --
+
+
+type Mode
+  = Manual
+  | Automatic
 
 
 type alias Test =
@@ -28,17 +35,19 @@ type TestStatus
   | Failed String
 
 
-
 type Message
-  = UserStartsTest Test
-  | TestSucceeds
-  | TestFails String
+  = StartAutomatedRun
+  | StartTest Test
+  | TestReportsSuccess Test
+  | TestReportsFailure Test String
+  | WindowError String
 
 
 type alias Model =
   { tests : List Test
   , testStatusByName : Dict.Dict String TestStatus
   , currentTest : Maybe Test
+  , mode : Mode
   }
 
 
@@ -51,19 +60,50 @@ noCmd m =
   (m, Cmd.none)
 
 
-testFinished : TestStatus -> Model -> (Model, Cmd Message)
-testFinished status oldModel =
-  case oldModel.currentTest of
-    Nothing -> Debug.crash "** library error ** Test finished, but currentStatus is unset"
-    Just test ->
-      let
-        newModel =
-          { oldModel
-          | currentTest = Nothing
-          , testStatusByName = Dict.insert test.name status oldModel.testStatusByName
-          }
-      in
-        ( newModel, sendTestStatusToBackend newModel test status )
+-- since Tests include Tasks, they are not comparable
+isCurrentTest : Model -> Test -> Bool
+isCurrentTest model test =
+  case model.currentTest of
+    Nothing -> False
+    Just currentTest -> currentTest.name == test.name
+
+
+startTest : Test -> Cmd Message
+startTest test =
+  Task.perform WindowError (\_ -> StartTest test) (Process.sleep <| 10 * Time.millisecond)
+
+
+
+runNextTest : Model -> Cmd Message
+runNextTest model =
+  case List.head <| List.filter (\t -> Dict.get t.name model.testStatusByName == Just Pending) model.tests of
+    Nothing -> Cmd.none
+    Just test -> startTest test
+
+
+reportTestResult : Test -> TestStatus -> Model -> (Model, Cmd Message)
+reportTestResult test reportedStatus oldModel =
+  let
+    -- Ensure duplicate results are never successful
+    finalStatus =
+      if isCurrentTest oldModel test || reportedStatus /= Successful
+      then reportedStatus
+      else Failed "Test Task reports success after a result has been provided already"
+
+    newModel =
+      { oldModel
+      | currentTest = Nothing
+      , testStatusByName = Dict.insert test.name finalStatus oldModel.testStatusByName
+      }
+
+    backendCmd = sendUpdateToBackend newModel (Just test) finalStatus
+
+    automationCmd = if newModel.mode /= Automatic then Cmd.none else runNextTest newModel
+
+    -- TODO: what if test /= current test AND current test is still running?
+
+  in
+    (newModel, Cmd.batch [backendCmd, automationCmd])
 
 
 --
@@ -73,23 +113,46 @@ update : Message -> Model -> (Model, Cmd Message)
 update message oldModel =
   case message of
 
-    UserStartsTest test ->
-      if oldModel.currentTest /= Nothing
-      then noCmd oldModel
-      else
-        let
-           newModel = { oldModel | currentTest = Just test }
-           testCmd = Task.perform TestFails (\_ -> TestSucceeds) test.task
-           backendCmd = sendTestStatusToBackend newModel test Pending
-        in
-           (newModel, Cmd.batch [backendCmd, testCmd])
 
-    TestSucceeds ->
-      testFinished Successful oldModel
+    StartAutomatedRun ->
 
-    TestFails error ->
-      testFinished (Failed error) oldModel
+      case List.head oldModel.tests of
+        Nothing ->
+          (oldModel, sendUpdateToBackend oldModel Nothing <| Failed "Nothing to do")
+        Just test0 ->
+          let
+            newModel = { oldModel | mode = Automatic }
+            cmd = startTest test0
+          in
+            (newModel, cmd)
 
+
+    StartTest test ->
+
+      case oldModel.currentTest of
+        Just currentTest ->
+          Debug.crash <| "Attempt to start test '" ++ test.name ++ "' while test '" ++ currentTest.name ++ "' is still running"
+        Nothing ->
+          let
+             newModel = { oldModel | currentTest = Just test }
+             testCmd = Task.perform (TestReportsFailure test) (\_ -> TestReportsSuccess test) test.task
+             backendCmd = sendUpdateToBackend newModel (Just test) Pending
+          in
+             (newModel, Cmd.batch [backendCmd, testCmd])
+
+
+    TestReportsSuccess test ->
+      reportTestResult test Successful oldModel
+
+
+    TestReportsFailure test error ->
+      reportTestResult test (Failed error) oldModel
+
+
+    WindowError error ->
+      case oldModel.currentTest of
+        Just test -> reportTestResult test (Failed error) oldModel
+        Nothing -> (oldModel, sendUpdateToBackend oldModel Nothing (Failed error))
 
 
 
@@ -98,12 +161,15 @@ update message oldModel =
 --
 testView model test =
   let
-    isDisabled = False --model.currentTest /= Nothing
+    isDisabled = model.mode == Automatic || model.currentTest /= Nothing
 
-    (message, clazz) = case Maybe.withDefault (Failed "!!") <| Dict.get test.name model.testStatusByName of
-      Pending -> ("Pending", "pending")
-      Successful -> ("Passed", "passed")
-      Failed message -> ("Failed: " ++ message, "failed")
+    (message, clazz) =
+      if isCurrentTest model test
+      then ("Running...", "running")
+      else case Maybe.withDefault (Failed "!!") <| Dict.get test.name model.testStatusByName of
+        Pending -> ("Pending", "pending")
+        Successful -> ("Passed", "passed")
+        Failed message -> ("Failed: " ++ message, "failed")
 
   in
     li
@@ -112,7 +178,7 @@ testView model test =
         [ class "test-button"
         , id test.name
         , disabled isDisabled
-        , onClick <| UserStartsTest test
+        , onClick <| StartTest test
         ]
         [ text test.name ]
       , span
@@ -124,7 +190,6 @@ testView model test =
 view : Model -> Html Message
 view model =
   ol [] <| List.map (testView model) model.tests
-
 
 
 
@@ -140,6 +205,7 @@ init tests =
     { tests = tests
     , testStatusByName = Dict.fromList <| List.map (\t -> (t.name, Pending)) tests
     , currentTest = Nothing
+    , mode = Manual
     }
 
   in
@@ -150,17 +216,36 @@ init tests =
 
 
 --
--- Ports
+-- Interop
 --
 
-port sendTestStatusToBackendPort : (String, String, Int) -> Cmd msg
 
-sendTestStatusToBackend : Model -> Test -> TestStatus -> Cmd msg
-sendTestStatusToBackend model test status =
+port sendUpdateToBackendPort : (String, String, Int) -> Cmd msg
+
+sendUpdateToBackend : Model -> Maybe Test -> TestStatus -> Cmd msg
+sendUpdateToBackend model maybeTest status =
   let
     pendingCount = Dict.values model.testStatusByName |> List.filter ((==) Pending) |> List.length
+    testName = case maybeTest of
+      Nothing -> "Uncaught exception"
+      Just test -> test.name
   in
-    sendTestStatusToBackendPort (test.name, toString status, pendingCount)
+    sendUpdateToBackendPort (testName, toString status, pendingCount)
+
+
+port windowOnErrorPort : (String -> msg) -> Sub msg
+
+
+port automatedRunPort : (String -> msg) -> Sub msg
+
+
+subscriptions : Model -> Sub Message
+subscriptions model =
+  Sub.batch
+    [ windowOnErrorPort WindowError
+    , automatedRunPort (\_ -> StartAutomatedRun)
+    ]
+
 
 
 --
@@ -172,5 +257,5 @@ program tests =
   { init = init tests
   , update = update
   , view = view
-  , subscriptions = \_ -> Sub.none
+  , subscriptions = subscriptions
   }

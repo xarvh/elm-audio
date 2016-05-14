@@ -13,17 +13,9 @@ app.on('ready', function () {
   win.on('closed', () => { win = null; });
 
 
-  var windowErrors = [];
-
-  ipcMain.on('windowError', function (event, error) {
-    windowErrors.push(error);
-    console.error('window.onerror: ' + error.sourceFile + ':' + error.lineNumber + '| "' + error.message + '"');
-  });
-
-
   var testsByName = {};
 
-  ipcMain.on('testInfo', function (event, info) {
+  ipcMain.on('update', function (event, info) {
     testsByName[info.name] = info.status;
 
     switch (info.status) {
@@ -43,7 +35,7 @@ app.on('ready', function () {
       if (testsByName[name] !== 'Successful') { allSuccessful = false; }
     }
 
-    var exitCode = allSuccessful && !windowErrors.length ? 0 : -1;
+    var exitCode = allSuccessful ? 0 : -1;
 
     process.exit(exitCode);
   }
